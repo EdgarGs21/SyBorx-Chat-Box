@@ -11,6 +11,9 @@
     doc: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
     sun: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
     moon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+    user: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    userplus: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>',
+    logout: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
     x: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
   };
 
@@ -18,23 +21,37 @@
     token: localStorage.getItem('syborx_token') || '',
     username: localStorage.getItem('syborx_user') || '',
     theme: localStorage.getItem('syborx_theme') || 'dark',
-    model: localStorage.getItem('syborx_model') === 'gemini-2.5-flash'
-      ? 'gemini-3.1-flash'
-      : (localStorage.getItem('syborx_model') || 'gemini-3.1-flash'),
+    model: localStorage.getItem('syborx_model') || 'gemini-flash-latest',
     chats: [],
     currentChatId: null,
     attachments: [],
     sending: false,
+    usage: null,
   };
 
   let authMode = 'login';
 
   /* ===================== API ===================== */
+  function clientId() {
+    let id = localStorage.getItem('syborx_client');
+    if (!id) {
+      id = (crypto.randomUUID && crypto.randomUUID()) ||
+        'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      localStorage.setItem('syborx_client', id);
+    }
+    return id;
+  }
+
   async function api(path, opts = {}) {
     const res = await fetch(path, {
       method: opts.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'X-Client-Id': clientId(),
         ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
       },
       body: opts.body,
@@ -43,8 +60,7 @@
     try { data = await res.json(); } catch (_) { /* sin cuerpo JSON */ }
     if (res.status === 401) {
       clearSession();
-      showLogin();
-      throw new Error('Sesión expirada. Inicia sesión de nuevo.');
+      throw new Error(data.error || 'No autorizado.');
     }
     if (!res.ok) throw new Error(data.error || 'Error del servidor.');
     return data;
@@ -66,33 +82,117 @@
     $('theme-toggle').innerHTML = t === 'dark' ? ICONS.sun : ICONS.moon;
   }
 
+  /* ===================== USO DEL PLAN ===================== */
+  function updateUsage(u) {
+    if (!u) {
+      state.usage = { plan: 'anonimo', label: 'Anónimo', used: 0, maxResponses: 5, maxFiles: 0 };
+    } else {
+      state.usage = u;
+    }
+    renderProfile();
+    renderUsageHint();
+    refreshAttachBtn();
+  }
+
+  function renderUsageHint() {
+    const el = $('usage-hint');
+    if (!el) return;
+    const u = state.usage;
+    if (!u) { el.textContent = ''; return; }
+    el.textContent = `${u.label} · ${u.used}/${u.maxResponses} respuestas · hasta ${u.maxFiles} archivo${u.maxFiles === 1 ? '' : 's'} por mensaje`;
+    el.classList.toggle('exhausted', u.used >= u.maxResponses);
+  }
+
+  function refreshAttachBtn() {
+    const u = state.usage || { maxFiles: 0 };
+    const btn = $('attach-btn');
+    const blocked = u.maxFiles === 0;
+    const full = !blocked && state.attachments.length >= u.maxFiles;
+    btn.disabled = blocked || full;
+    btn.title = blocked
+      ? 'Los usuarios anónimos no pueden adjuntar archivos'
+      : (full ? 'Límite de archivos alcanzado' : 'Adjuntar archivos');
+  }
+
+  /* ===================== PERFIL / MENÚ ===================== */
+  function renderProfile() {
+    const logged = !!state.token;
+    $('profile-name').textContent = logged ? state.username : 'Anónimo';
+    $('avatar').textContent = logged ? (state.username[0] || 'U').toUpperCase() : 'A';
+
+    const u = state.usage || { label: '', used: 0, maxResponses: 5, maxFiles: 0 };
+    const pct = u.maxResponses ? Math.min(100, Math.round((u.used / u.maxResponses) * 100)) : 100;
+
+    $('profile-menu').innerHTML = `
+      <div class="drop-title">${logged ? `${state.username} · ${u.label}` : 'Perfil anónimo'}</div>
+      <div class="usage-row">
+        <span class="usage-text">Respuestas: ${u.used} / ${u.maxResponses}</span>
+        <span class="usage-text">Archivos: hasta ${u.maxFiles} por mensaje</span>
+        <div class="usage-bar"><div class="usage-fill ${u.used >= u.maxResponses ? 'exhausted' : ''}" style="width:${pct}%"></div></div>
+      </div>
+      ${logged
+        ? `
+          <button id="switch-account-btn" type="button">${ICONS.user}Cambiar de cuenta</button>
+          <button id="logout-btn" class="danger" type="button">${ICONS.logout}Cerrar sesión</button>`
+        : `
+          <button id="anon-login-btn" type="button">${ICONS.user}Iniciar sesión</button>
+          <button id="anon-register-btn" type="button">${ICONS.userplus}Registrarse</button>`}
+    `;
+
+    if (logged) {
+      $('logout-btn').addEventListener('click', doLogout);
+      $('switch-account-btn').addEventListener('click', () => {
+        fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${state.token}` } }).catch(() => {});
+        clearSession();
+        showLogin('login');
+      });
+    } else {
+      $('anon-login-btn').addEventListener('click', () => showLogin('login'));
+      $('anon-register-btn').addEventListener('click', () => showLogin('register'));
+    }
+  }
+
   /* ===================== AUTH UI ===================== */
   function setAuthMode(mode) {
     authMode = mode;
     $('tab-login').classList.toggle('active', mode === 'login');
     $('tab-register').classList.toggle('active', mode === 'register');
+    $('plan-selector').classList.toggle('hidden', mode !== 'register');
     $('auth-submit').textContent = mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
     $('auth-error').textContent = '';
   }
 
-  function showLogin() {
+  function showLogin(mode) {
     $('app').classList.add('hidden');
     $('login-screen').classList.remove('hidden');
-    setAuthMode('login');
+    setAuthMode(mode || 'login');
     $('auth-username').focus();
   }
 
   function showApp() {
     $('login-screen').classList.add('hidden');
     $('app').classList.remove('hidden');
-    $('profile-name').textContent = state.username;
-    $('avatar').textContent = (state.username[0] || 'U').toUpperCase();
+    renderProfile();
     showEmptyState();
   }
 
   async function enterApp() {
     showApp();
+    try {
+      const usage = await api('/api/usage');
+      updateUsage(usage);
+    } catch (e) {
+      updateUsage(null);
+    }
     await loadChats();
+  }
+
+  async function doLogout() {
+    try { await api('/api/logout', { method: 'POST' }); } catch (_) { /* ignorar */ }
+    clearSession();
+    state.usage = null;
+    await enterApp();
+    toast('Sesión cerrada. Ahora estás en modo anónimo.');
   }
 
   /* ===================== SIDEBAR ===================== */
@@ -300,6 +400,16 @@
     const text = $('input').value.trim();
     if (!text && state.attachments.length === 0) return;
 
+    const u = state.usage || { maxFiles: 0, maxResponses: 5, used: 0 };
+    if (state.attachments.length > 0 && u.maxFiles === 0) {
+      toast('Los usuarios anónimos no pueden adjuntar archivos.');
+      return;
+    }
+    if (u.used >= u.maxResponses) {
+      toast(`Has alcanzado el límite de ${u.maxResponses} respuestas de tu plan ${u.label}. Inicia sesión o cambia de cuenta.`);
+      return;
+    }
+
     state.sending = true;
     $('send-btn').disabled = true;
 
@@ -333,6 +443,7 @@
       });
       hideTyping();
       appendMessageUI('assistant', { text: data.reply, files: [] });
+      updateUsage(data.usage);
       await loadChats();
       scrollBottom();
     } catch (e) {
@@ -383,10 +494,12 @@
       x.addEventListener('click', () => {
         state.attachments.splice(i, 1);
         renderAttachments();
+        refreshAttachBtn();
       });
       chip.appendChild(x);
       box.appendChild(chip);
     });
+    refreshAttachBtn();
   }
 
   function clearAttachments() {
@@ -486,18 +599,20 @@
       e.preventDefault();
       const username = $('auth-username').value.trim();
       const password = $('auth-password').value;
+      const plan = document.querySelector('input[name="plan"]:checked')?.value || 'gratuito';
       $('auth-error').textContent = '';
       const btn = $('auth-submit');
       btn.disabled = true;
       try {
         const data = await api(authMode === 'login' ? '/api/login' : '/api/register', {
           method: 'POST',
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ username, password, plan }),
         });
         state.token = data.token;
         state.username = data.user.username;
         localStorage.setItem('syborx_token', data.token);
         localStorage.setItem('syborx_user', data.user.username);
+        updateUsage(data.usage);
         await enterApp();
       } catch (err) {
         $('auth-error').textContent = err.message;
@@ -527,15 +642,14 @@
       $('settings-menu').classList.add('hidden');
     });
 
-    $('logout-btn').addEventListener('click', async () => {
-      try { await api('/api/logout', { method: 'POST' }); } catch (_) { /* ignorar */ }
-      clearSession();
-      showLogin();
-    });
-    $('switch-account-btn').addEventListener('click', async () => {
-      try { await api('/api/logout', { method: 'POST' }); } catch (_) { /* ignorar */ }
-      clearSession();
-      showLogin();
+    // Plan cards
+    document.querySelectorAll('.plan-card').forEach((card) => {
+      const input = card.querySelector('input');
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.plan-card').forEach((c) => c.classList.remove('checked'));
+        card.classList.add('checked');
+        input.checked = true;
+      });
     });
 
     const ms = $('model-select');
@@ -570,13 +684,24 @@
     });
     input.addEventListener('input', autoResizeInput);
 
-    $('attach-btn').addEventListener('click', () => $('file-input').click());
+    $('attach-btn').addEventListener('click', () => {
+      const u = state.usage || { maxFiles: 0 };
+      if (u.maxFiles === 0) {
+        toast('Los usuarios anónimos no pueden adjuntar archivos. Inicia sesión para habilitarlos.');
+        return;
+      }
+      $('file-input').click();
+    });
 
     $('file-input').addEventListener('change', async (e) => {
+      const u = state.usage || { maxFiles: 0 };
       const files = Array.from(e.target.files || []);
       e.target.value = '';
       for (const f of files) {
-        if (state.attachments.length >= 5) { toast('Máximo 5 archivos por mensaje.'); break; }
+        if (state.attachments.length >= u.maxFiles) {
+          toast(`Tu plan ${u.label} permite hasta ${u.maxFiles} archivos por mensaje.`);
+          break;
+        }
         if (f.size > 15 * 1024 * 1024) { toast(`"${f.name}" supera el límite de 15 MB.`); continue; }
         try {
           const dataUrl = await readFileAsDataURL(f);
@@ -605,13 +730,16 @@
 
     if (state.token) {
       try {
-        await api('/api/me');
+        const me = await api('/api/me');
+        state.username = me.username;
+        updateUsage(me.usage);
         await enterApp();
+        return;
       } catch (_) {
-        showLogin();
+        clearSession();
       }
-    } else {
-      showLogin();
     }
+    // Sin sesión: entramos como anónimo, el chat box es la primera pantalla
+    await enterApp();
   })();
 })();

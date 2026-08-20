@@ -5,8 +5,19 @@ const crypto = require('crypto');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
+const ANON_FILE = path.join(DATA_DIR, 'anonymous.json');
 
 const SALT = 'syborx_chat_salt_v1';
+
+// Planes de usuario y sus límites (archivos = fotos/documentos por mensaje)
+const PLANS = {
+  anonimo: { id: 'anonimo', label: 'Anónimo', maxResponses: 5, maxFiles: 0 },
+  gratuito: { id: 'gratuito', label: 'Gratuito', maxResponses: 50, maxFiles: 5 },
+  pro: { id: 'pro', label: 'Pro', maxResponses: 100, maxFiles: 15 },
+  enterprise: { id: 'enterprise', label: 'Enterprise', maxResponses: 200, maxFiles: 40 },
+};
+
+const ACCOUNT_PLANS = ['gratuito', 'pro', 'enterprise'];
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -47,7 +58,11 @@ function findUser(username) {
   return getUsers().find((u) => u.username.toLowerCase() === String(username).toLowerCase());
 }
 
-function createUser(username, password) {
+function getUser(username) {
+  return getUsers().find((u) => u.username === username);
+}
+
+function createUser(username, password, plan = 'gratuito') {
   const users = getUsers();
   if (findUser(username)) {
     const err = new Error('Ese usuario ya existe');
@@ -58,11 +73,63 @@ function createUser(username, password) {
     id: uid(),
     username,
     password: hashPassword(password),
+    plan: ACCOUNT_PLANS.includes(plan) ? plan : 'gratuito',
+    responsesUsed: 0,
     createdAt: new Date().toISOString(),
   };
   users.push(user);
   saveUsers(users);
   return user;
+}
+
+function incrementResponses(username) {
+  const users = getUsers();
+  const u = users.find((x) => x.username === username);
+  if (u) {
+    u.responsesUsed = (u.responsesUsed || 0) + 1;
+    saveUsers(users);
+  }
+}
+
+function getUserUsage(username) {
+  const u = getUser(username);
+  if (!u) return null;
+  const plan = PLANS[u.plan] || PLANS.gratuito;
+  return {
+    plan: plan.id,
+    label: plan.label,
+    used: u.responsesUsed || 0,
+    maxResponses: plan.maxResponses,
+    maxFiles: plan.maxFiles,
+  };
+}
+
+// ---- Uso anónimo (por clientId persistido en localStorage) ----
+// data/anonymous.json = { [clientId]: { responses, createdAt } }
+function getAnonUsage(clientId) {
+  const m = readJSON(ANON_FILE, {});
+  const e = m[clientId];
+  return e ? { responses: e.responses || 0 } : { responses: 0 };
+}
+
+function incrementAnonUsage(clientId) {
+  const m = readJSON(ANON_FILE, {});
+  const e = m[clientId] || { responses: 0, createdAt: new Date().toISOString() };
+  e.responses = (e.responses || 0) + 1;
+  m[clientId] = e;
+  writeJSON(ANON_FILE, m);
+}
+
+function getAnonPlan(clientId) {
+  const u = getAnonUsage(clientId);
+  const plan = PLANS.anonimo;
+  return {
+    plan: plan.id,
+    label: plan.label,
+    used: u.responses,
+    maxResponses: plan.maxResponses,
+    maxFiles: plan.maxFiles,
+  };
 }
 
 function verifyPassword(user, password) {
@@ -164,8 +231,11 @@ function removeLastMessage(username, id, role) {
 }
 
 module.exports = {
+  PLANS,
+  ACCOUNT_PLANS,
   createUser,
   findUser,
+  getUser,
   verifyPassword,
   createSession,
   getSession,
@@ -176,5 +246,10 @@ module.exports = {
   deleteChat,
   appendMessage,
   removeLastMessage,
+  incrementResponses,
+  getUserUsage,
+  getAnonUsage,
+  incrementAnonUsage,
+  getAnonPlan,
   uid,
 };
