@@ -52,6 +52,7 @@ services:
       - ./apps/backend/src:/app/src
       - ./apps/backend/package.json:/app/package.json
       - ./apps/backend/tsconfig.json:/app/tsconfig.json
+      - ./public:/app/public
       - backend_uploads:/app/uploads
       - /app/node_modules
     networks:
