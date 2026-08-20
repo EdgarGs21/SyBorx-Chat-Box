@@ -1,5 +1,3 @@
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-
 const ALLOWED_MODELS = [
   'gemini-flash-latest',
   'gemini-2.5-pro',
@@ -9,6 +7,10 @@ const ALLOWED_MODELS = [
   'gemini-3.1-flash-lite',
   'gemini-3.6-flash',
 ];
+
+const DEFAULT_MODEL = ALLOWED_MODELS.includes(process.env.GEMINI_MODEL)
+  ? process.env.GEMINI_MODEL
+  : 'gemini-flash-latest';
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 

@@ -36,6 +36,26 @@
           <label for="auth-password">Contraseña</label>
           <input id="auth-password" type="password" placeholder="••••••••" required>
         </div>
+        <div id="plan-selector" class="plan-selector hidden">
+          <label>Plan de tu cuenta</label>
+          <div class="plan-grid">
+            <label class="plan-card checked">
+              <input type="radio" name="plan" value="gratuito" checked>
+              <span class="plan-name">Gratuito</span>
+              <span class="plan-desc">50 respuestas<br>5 archivos</span>
+            </label>
+            <label class="plan-card">
+              <input type="radio" name="plan" value="pro">
+              <span class="plan-name">Pro</span>
+              <span class="plan-desc">100 respuestas<br>15 archivos</span>
+            </label>
+            <label class="plan-card">
+              <input type="radio" name="plan" value="enterprise">
+              <span class="plan-name">Enterprise</span>
+              <span class="plan-desc">200 respuestas<br>40 archivos</span>
+            </label>
+          </div>
+        </div>
         <div id="auth-error" class="auth-error"></div>
         <button id="auth-submit" type="submit" class="btn-primary">Iniciar sesión</button>
       </form>
@@ -68,7 +88,7 @@
           </button>
           <div id="settings-menu" class="dropdown glass hidden">
             <div class="drop-title">Modelo de Gemini</div>
-            <select id="model-select" class="model-select">
+<select id="model-select" class="model-select">
               <option value="gemini-flash-latest">Gemini Flash (última versión)</option>
               <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
               <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
@@ -94,16 +114,7 @@
             <span id="profile-name" class="profile-name">usuario</span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
-          <div id="profile-menu" class="dropdown glass hidden">
-            <button id="switch-account-btn" type="button">
-              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              Cambiar de cuenta
-            </button>
-            <button id="logout-btn" class="danger" type="button">
-              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              Cerrar sesión
-            </button>
-          </div>
+          <div id="profile-menu" class="dropdown glass hidden"></div>
         </div>
       </div>
     </aside>
@@ -126,6 +137,7 @@
       <div id="attachments-preview" class="attachments-preview"></div>
 
       <div class="composer-wrap">
+        <div id="usage-hint" class="usage-hint"></div>
         <div class="composer glass">
           <button id="attach-btn" class="icon-btn" title="Adjuntar archivos">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
