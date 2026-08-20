@@ -42,7 +42,7 @@ services:
       DB_NAME: ${DB_NAME:-chatbot_db}
       IA_PROVIDER: ${IA_PROVIDER:-gemini}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_key_12345}
       UPLOAD_DIR: ${UPLOAD_DIR:-./uploads}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173}

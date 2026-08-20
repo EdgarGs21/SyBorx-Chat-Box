@@ -2,14 +2,16 @@ import { GoogleGenerativeAI, Content, Part } from '@google/generative-ai';
 import { IProveedorIA, AIGenerateOptions, AIGenerateResult } from './ai.interface.js';
 
 export const ALLOWED_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
+  'gemini-3.6-flash',
+  'gemini-3.1-flash',
+  'gemini-3.5-flash',
   'gemini-2.5-flash',
   'gemini-2.5-pro',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
 ];
 
-export const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+export const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 export class GeminiProvider implements IProveedorIA {
   private genAI: GoogleGenerativeAI | null = null;
@@ -68,11 +70,11 @@ export class GeminiProvider implements IProveedorIA {
 
   async generateResponse(opts: AIGenerateOptions): Promise<AIGenerateResult> {
     const client = this.getClient();
-    const modelName = opts.model && ALLOWED_MODELS.includes(opts.model) ? opts.model : DEFAULT_MODEL;
+    let modelName = opts.model && ALLOWED_MODELS.includes(opts.model) ? opts.model : DEFAULT_MODEL;
     const startTime = Date.now();
 
     try {
-      const model = client.getGenerativeModel({
+      let model = client.getGenerativeModel({
         model: modelName,
         systemInstruction: opts.systemInstruction || 'Eres SyBorx, un asistente de IA inteligente, amigable, preciso y servicial.',
       });
@@ -109,7 +111,24 @@ export class GeminiProvider implements IProveedorIA {
         parts: currentParts,
       });
 
-      const response = await model.generateContent({ contents });
+      let response;
+      try {
+        response = await model.generateContent({ contents });
+      } catch (callErr: any) {
+        // Si el modelo específico falló con 404 (deprecado), reintentar con el default gemini-3.6-flash
+        if (callErr.message && callErr.message.includes('404') && modelName !== 'gemini-3.6-flash') {
+          console.warn(`⚠️ Modelo ${modelName} no disponible, reintentando con gemini-3.6-flash...`);
+          modelName = 'gemini-3.6-flash';
+          model = client.getGenerativeModel({
+            model: modelName,
+            systemInstruction: opts.systemInstruction || 'Eres SyBorx, un asistente de IA inteligente, amigable, preciso y servicial.',
+          });
+          response = await model.generateContent({ contents });
+        } else {
+          throw callErr;
+        }
+      }
+
       const latencyMs = Date.now() - startTime;
       const candidate = response.response;
       const replyText = candidate.text() || 'No pude generar una respuesta.';
