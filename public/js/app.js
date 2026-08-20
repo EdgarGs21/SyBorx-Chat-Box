@@ -117,11 +117,15 @@
   /* ===================== PERFIL / MENÚ ===================== */
   function renderProfile() {
     const logged = !!state.token;
-    $('profile-name').textContent = logged ? state.username : 'Anónimo';
-    $('avatar').textContent = logged ? (state.username[0] || 'U').toUpperCase() : 'A';
-
-    const u = state.usage || { label: '', used: 0, maxResponses: 5, maxFiles: 0 };
-    const pct = u.maxResponses ? Math.min(100, Math.round((u.used / u.maxResponses) * 100)) : 100;
+    if ($('profile-name')) $('profile-name').textContent = logged ? state.username : 'Invitado';
+    if ($('profile-tier')) {
+      const u = state.usage;
+      const tierLabel = u?.label || (logged ? 'PRO MEMBER' : 'FREE GUEST');
+      $('profile-tier').textContent = tierLabel.toUpperCase();
+    }
+    if ($('avatar')) {
+      $('avatar').innerHTML = ICONS.user;
+    }
 
     $('profile-menu').innerHTML = `
       <div class="drop-title">${logged ? `${state.username} · ${u.label}` : 'Perfil anónimo'}</div>
@@ -324,7 +328,7 @@
     wrap.className = 'msg ' + (isUser ? 'user' : 'bot');
 
     const bubble = document.createElement('div');
-    bubble.className = 'bubble';
+    bubble.className = 'msg-bubble';
 
     for (const f of msg.content.files || []) {
       if (f.mimeType.startsWith('image/')) {
@@ -642,13 +646,16 @@
       $('settings-menu').classList.add('hidden');
     });
 
-    // Plan cards
-    document.querySelectorAll('.plan-card').forEach((card) => {
-      const input = card.querySelector('input');
+    // Prompt suggestion cards
+    document.querySelectorAll('.prompt-card').forEach((card) => {
       card.addEventListener('click', () => {
-        document.querySelectorAll('.plan-card').forEach((c) => c.classList.remove('checked'));
-        card.classList.add('checked');
-        input.checked = true;
+        const promptText = card.getAttribute('data-prompt');
+        if (promptText) {
+          const input = $('input');
+          input.value = promptText + ' ';
+          input.focus();
+          autoResizeInput();
+        }
       });
     });
 
