@@ -140,3 +140,27 @@ app.listen(PORT, () => {
   }
   console.log('========================================');
 });
+
+async function callGeminiWithRetry(model, content, retries = 3, delay = 1500) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await model.generateContent(content);
+    } catch (error) {
+      const isHighDemand = error.message?.includes('high demand') || error.status === 503;
+      if (!isHighDemand || attempt === retries) throw error;
+      
+      console.warn(`Servidor ocupado. Reintentando (${attempt}/${retries}) en ${delay / 1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2; // Duplica el tiempo de espera en cada reintento
+    }
+  }
+}
+
+try {
+  // Intento 1: Modelo Principal
+  response = await callGeminiWithRetry(primaryModel, prompt);
+} catch (error) {
+  console.log("Cambiando a modelo de respaldo por alta demanda...");
+  // Intento 2: Modelo secundario de respaldo
+  response = await callGeminiWithRetry(fallbackModel, prompt);
+}

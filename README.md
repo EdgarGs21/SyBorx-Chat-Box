@@ -24,7 +24,7 @@ Chatbox con la API de **Google Gemini**. Frontend con efecto *liquid glass*, tem
 GEMINI_API_KEY=TU_API_KEY_AQUI
 ```
 
-> El modelo predeterminado es `gemini-3.1-flash`. La disponibilidad y los límites dependen de tu cuenta y de la API de Gemini.
+> El modelo predeterminado es `gemini-flash-latest`. La disponibilidad y los límites dependen de tu cuenta y de la API de Gemini.
 
 ## Puesta en marcha
 
@@ -62,7 +62,7 @@ chatBox/
 | Variable        | Descripción                                              | Valor por defecto      |
 |-----------------|----------------------------------------------------------|------------------------|
 | `GEMINI_API_KEY`| Tu API key de Gemini (obligatoria)                       | —                      |
-| `GEMINI_MODEL`  | Modelo por defecto                                       | `gemini-3.1-flash`     |
+| `GEMINI_MODEL`  | Modelo por defecto                                       | `gemini-flash-latest`  |
 | `PORT`          | Puerto del servidor                                      | `3000`                 |
 
 ## Notas de seguridad

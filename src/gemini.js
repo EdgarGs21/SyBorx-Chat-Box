@@ -1,7 +1,7 @@
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
 const ALLOWED_MODELS = [
-  'gemini-3.1-flash',
+  'gemini-flash-latest',
   'gemini-2.5-pro',
   'gemini-2.5-flash-lite',
   'gemini-3.5-flash',

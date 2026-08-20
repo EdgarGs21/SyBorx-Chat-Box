@@ -18,9 +18,9 @@
     token: localStorage.getItem('syborx_token') || '',
     username: localStorage.getItem('syborx_user') || '',
     theme: localStorage.getItem('syborx_theme') || 'dark',
-    model: localStorage.getItem('syborx_model') === 'gemini-2.5-flash'
-      ? 'gemini-3.1-flash'
-      : (localStorage.getItem('syborx_model') || 'gemini-3.1-flash'),
+    model: ['gemini-2.5-flash', 'gemini-3.1-flash'].includes(localStorage.getItem('syborx_model'))
+      ? 'gemini-flash-latest'
+      : (localStorage.getItem('syborx_model') || 'gemini-flash-latest'),
     chats: [],
     currentChatId: null,
     attachments: [],
