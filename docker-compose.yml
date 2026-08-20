@@ -3,6 +3,8 @@ services:
     image: postgres:16-alpine
     container_name: chatbot_postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${DB_USER:-chatbot_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-chatbot_pass123}
@@ -19,8 +21,46 @@ services:
     networks:
       - chatbot_network
 
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: chatbot_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: ${PORT:-3000}
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://${DB_USER:-chatbot_user}:${DB_PASSWORD:-chatbot_pass123}@postgres:5432/${DB_NAME:-chatbot_db}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-chatbot_user}
+      DB_PASSWORD: ${DB_PASSWORD:-chatbot_pass123}
+      DB_NAME: ${DB_NAME:-chatbot_db}
+      IA_PROVIDER: ${IA_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_key_12345}
+      UPLOAD_DIR: ${UPLOAD_DIR:-./uploads}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173}
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./apps/backend/src:/app/src
+      - ./apps/backend/package.json:/app/package.json
+      - ./apps/backend/tsconfig.json:/app/tsconfig.json
+      - backend_uploads:/app/uploads
+      - /app/node_modules
+    networks:
+      - chatbot_network
+
 volumes:
   postgres_data:
+    driver: local
+  backend_uploads:
     driver: local
 
 networks:

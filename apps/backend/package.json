@@ -1,0 +1,42 @@
+{
+  "name": "chatbot-backend",
+  "version": "1.0.0",
+  "description": "Backend API para Chatbot Multimodal con Gemini y PostgreSQL",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "build": "rimraf dist && tsc",
+    "start": "node dist/app.js",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "test": "echo \"No tests specified yet\" && exit 0"
+  },
+  "keywords": [
+    "chatbot",
+    "gemini",
+    "postgresql",
+    "typescript",
+    "multimodal"
+  ],
+  "author": "Equipo de Ingenieria",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.13.3",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.13.9",
+    "@types/pg": "^8.11.11",
+    "@types/uuid": "^10.0.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
