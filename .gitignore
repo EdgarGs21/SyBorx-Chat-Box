@@ -17,7 +17,8 @@ build/
 .env.*.local
 !.env.example
 
-# Uploaded assets & local storage
+# Local databases and storage
+data/
 uploads/
 *.jpg
 *.jpeg
@@ -34,5 +35,5 @@ Thumbs.db
 *.swp
 *.swo
 
-# Docker volume data (if mapped locally)
+# Docker volume data
 pgdata/
