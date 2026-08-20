@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chatbot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-chatbot_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-chatbot_pass123}
+      POSTGRES_DB: ${DB_NAME:-chatbot_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-chatbot_user} -d ${DB_NAME:-chatbot_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatbot_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  chatbot_network:
+    driver: bridge
